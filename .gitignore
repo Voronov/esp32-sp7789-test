@@ -1,0 +1,65 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+esp32-env/
+env/
+venv/
+.venv/
+
+# MicroPython / ESP32 build artifacts
+*.mpy
+.build/
+build/
+firmware/
+lib/
+parts/
+dist/
+*.hex
+*.bin
+*.elf
+*.dfu
+
+# Thonny / MicroPython tools
+.local/
+
+# ampy / mpremote caches/state
+ampy-cache/
+mpremote-state/
+
+# Pytest / test artifacts
+.pytest_cache/
+test_output/
+
+# Mypy cache
+.mypy_cache/
+
+# Pip / packaging
+pip-wheel-metadata/
+*.egg-info/
+
+# IDEs and editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# macOS
+.DS_Store
+
+# Environment files
+.env
+.env.local
+
+# Logs
+*.log
+
+# Other
+coverage.xml
+htmlcov/
+
+# Local secrets or keys (if any)
+*.pem
+*.key
