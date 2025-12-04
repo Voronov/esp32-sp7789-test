@@ -10,6 +10,9 @@ This project provides a MicroPython driver for ST7789-based displays and include
 │   └── vga2_bold_16x32.py # Bitmap font file
 ├── driver/
 │   └── st7789.py          # ST7789 Display Driver Library
+├── max30100/
+│   ├── sensor.py          # MAX30100 Driver & Demo
+│   └── sensor_interface.py # Sensor Interfaces
 ├── test/
 │   └── sp7789_test.py     # Simple hardware test script
 ├── tools/
@@ -22,6 +25,7 @@ This project provides a MicroPython driver for ST7789-based displays and include
 
 - **ESP32 Development Board**
 - **ST7789 Display Module** (Demo configured for 240x240 resolution)
+- **MAX30100 Pulse Oximeter Sensor**
 
 ## Wiring Configuration
 
@@ -36,6 +40,16 @@ The default pin configuration in the scripts is as follows:
 | **CS**      | N/C       | Chip Select (Set to `None` in code) |
 | **VCC**     | 3.3V      | Power |
 | **GND**     | GND       | Ground |
+
+### MAX30100 Wiring
+
+| Sensor Pin | ESP32 Pin | Notes |
+|------------|-----------|-------|
+| **VIN**    | 3.3V      | Power |
+| **SCL**    | GPIO 22   | I2C Clock |
+| **SDA**    | GPIO 21   | I2C Data |
+| **INT**    | N/C       | Interrupt (Not used) |
+| **GND**    | GND       | Ground |
 
 > **Note:** If your display module requires a Chip Select (CS) pin, update the pin definition in the code (currently set to `None`).
 
@@ -75,6 +89,22 @@ make run_clock
 *   Copies `st7789.py`, font files, and `clock_ui.py`.
 *   Displays a digital clock with a progress bar and screensaver.
 
+**Run Simple SPI Test:**
+```bash
+make run_simple
+```
+*   Copies `simple_spi.py`.
+*   Demonstrates direct SPI initialization and drawing without the heavy driver.
+*   Useful for understanding low-level control or debugging.
+
+**Run MAX30100 Sensor Demo:**
+```bash
+make run_sensor
+```
+*   Copies `sensor.py` and `sensor_interface.py`.
+*   Initializes the MAX30100 sensor via I2C.
+*   Displays Heart Rate (BPM), SpO2 (%), and Temperature in the console.
+
 **Interactive Menu:**
 ```bash
 make run
@@ -96,3 +126,29 @@ The driver supports:
 - Text drawing with bitmap fonts.
 - Basic shapes (lines, rectangles, polygons) and bitmaps.
 - Fast SPI communication.
+
+## MAX30100 Details (`sensor.py`)
+
+The MAX30100 driver provides:
+- I2C communication implementation.
+- Heart Rate (BPM) and SpO2 calculation algorithms.
+- Temperature reading.
+- FIFO buffer management for raw IR and Red LED data.
+- Configurable sample rates and LED pulse widths.
+
+To use it in your own code:
+```python
+from max30100.sensor import MAX30100, MAX30100Communication
+import machine
+
+i2c = machine.I2C(0, scl=machine.Pin(22), sda=machine.Pin(21))
+comm = MAX30100Communication(i2c)
+sensor = MAX30100(comm)
+
+if sensor.initialize():
+    sensor.configure(mode='spo2')
+    while True:
+        if sensor.is_ready():
+            data = sensor.read_processed_data()
+            print(f"HR: {data['heart_rate']}, SpO2: {data['spo2']}")
+```

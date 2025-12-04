@@ -82,17 +82,52 @@ run_clock: check_port
 	@# Run the clock script
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run clock/clock_ui.py
 
+# Run Simple SPI Project
+.PHONY: run_simple
+run_simple: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying Simple SPI Project to $$(cat $(PORT_FILE))..."
+	@# Copy Simple SPI Script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp simple_spi/simple_spi.py :simple_spi.py
+	@echo "File copied. Running simple SPI test..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run simple_spi/simple_spi.py
+
+# Run MAX30100 Sensor Project
+.PHONY: run_sensor
+run_sensor: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying MAX30100 Sensor Project to $$(cat $(PORT_FILE))..."
+	@# Create max30100 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :max30100 || true
+	@# Copy Sensor Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/sensor_interface.py :max30100/sensor_interface.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/constants.py :max30100/constants.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/comm.py :max30100/comm.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/device.py :max30100/device.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/example.py :max30100/example.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/__init__.py :max30100/__init__.py
+	@echo "Files copied. Running sensor demo..."
+	@# Run the sensor script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run max30100/example.py
+
 # Generic Run Target (Interactive)
 .PHONY: run
 run: check_port
 	@echo "Select project to run:"
 	@echo "1) Test (sp7789_test.py)"
 	@echo "2) Clock (clock_ui.py)"
-	@read -p "Enter choice [1/2]: " choice; \
+	@echo "3) Simple SPI (simple_spi.py)"
+	@echo "4) MAX30100 Sensor (example.py)"
+	@read -p "Enter choice [1/2/3/4]: " choice; \
 	if [ "$$choice" = "1" ]; then \
 		$(MAKE) run_test; \
 	elif [ "$$choice" = "2" ]; then \
 		$(MAKE) run_clock; \
+	elif [ "$$choice" = "3" ]; then \
+		$(MAKE) run_simple; \
+	elif [ "$$choice" = "4" ]; then \
+		$(MAKE) run_sensor; \
 	else \
 		echo "Invalid choice."; \
 	fi
