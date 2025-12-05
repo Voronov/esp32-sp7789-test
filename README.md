@@ -13,6 +13,11 @@ This project provides a MicroPython driver for ST7789-based displays and include
 ├── max30100/
 │   ├── sensor.py          # MAX30100 Driver & Demo
 │   └── sensor_interface.py # Sensor Interfaces
+├── hcsr04/
+│   ├── driver.py          # HC-SR04 Ultrasonic Sensor Driver
+│   ├── example.py         # Example with ST7789 display
+│   ├── example_simple.py  # Simple console example
+│   └── README.md          # HC-SR04 documentation
 ├── test/
 │   └── sp7789_test.py     # Simple hardware test script
 ├── tools/
@@ -25,7 +30,8 @@ This project provides a MicroPython driver for ST7789-based displays and include
 
 - **ESP32 Development Board**
 - **ST7789 Display Module** (Demo configured for 240x240 resolution)
-- **MAX30100 Pulse Oximeter Sensor**
+- **MAX30100 Pulse Oximeter Sensor** (I2C)
+- **HC-SR04 Ultrasonic Distance Sensor** (GPIO)
 
 ## Wiring Configuration
 
@@ -51,7 +57,18 @@ The default pin configuration in the scripts is as follows:
 | **INT**    | N/C       | Interrupt (Not used) |
 | **GND**    | GND       | Ground |
 
+### HC-SR04 Wiring
+
+| Sensor Pin | ESP32 Pin | Notes |
+|------------|-----------|-------|
+| **VCC**    | 5V        | Power (can work with 3.3V at reduced range) |
+| **TRIG**   | GPIO 12   | Trigger (configurable) |
+| **ECHO**   | GPIO 14   | Echo (configurable, use voltage divider for 5V) |
+| **GND**    | GND       | Ground |
+
 > **Note:** If your display module requires a Chip Select (CS) pin, update the pin definition in the code (currently set to `None`).
+> 
+> **HC-SR04 Warning:** The ECHO pin outputs 5V. Use a voltage divider (1kΩ + 2kΩ) to protect ESP32 GPIO pins. See `hcsr04/README.md` for details.
 
 ## Quick Start (Makefile)
 
@@ -105,6 +122,18 @@ make run_sensor
 *   Initializes the MAX30100 sensor via I2C.
 *   Displays Heart Rate (BPM), SpO2 (%), and Temperature in the console.
 
+**Run HC-SR04 Distance Sensor:**
+```bash
+# Simple console example
+mpremote run hcsr04/example_simple.py
+
+# With ST7789 display
+mpremote run hcsr04/example.py
+```
+*   Reads distance from HC-SR04 ultrasonic sensor.
+*   Displays measurements in cm, mm, and inches.
+*   See `hcsr04/README.md` for detailed documentation.
+
 **Interactive Menu:**
 ```bash
 make run
@@ -152,3 +181,46 @@ if sensor.initialize():
             data = sensor.read_processed_data()
             print(f"HR: {data['heart_rate']}, SpO2: {data['spo2']}")
 ```
+
+## HC-SR04 Details (`hcsr04/driver.py`)
+
+The HC-SR04 ultrasonic distance sensor driver provides:
+- Simple trigger/echo pin interface
+- Distance measurements in cm, mm, and inches
+- Statistical analysis (min, max, avg, median)
+- Object detection within threshold
+- Proper timing and timeout handling
+
+**Key Features:**
+- **Range**: 2cm - 400cm (±3mm accuracy)
+- **Timing**: Automatic 10μs trigger pulse
+- **Timeout**: 38ms for ~6.5m max range
+- **Multiple Units**: cm, mm, inches
+
+To use it in your own code:
+```python
+from hcsr04 import HCSR04
+import time
+
+# Initialize sensor (adjust pins as needed)
+sensor = HCSR04(trigger_pin=12, echo_pin=14)
+
+# Read distance
+while True:
+    distance = sensor.read_distance_cm()
+    if distance > 0:
+        print(f"Distance: {distance:.2f} cm")
+    else:
+        print("Out of range")
+    time.sleep_ms(100)
+
+# Statistical analysis
+stats = sensor.read_multiple(samples=10)
+print(f"Average: {stats['avg']} cm")
+
+# Object detection
+if sensor.is_object_detected(threshold_cm=30):
+    print("Object detected!")
+```
+
+**Important:** HC-SR04 ECHO pin outputs 5V. Use a voltage divider to protect ESP32 GPIO pins. See `hcsr04/README.md` for complete wiring diagrams and safety information.

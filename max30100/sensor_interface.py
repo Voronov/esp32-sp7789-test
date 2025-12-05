@@ -3,10 +3,21 @@ Sensor Interface Module using Abstract Base Classes
 This demonstrates proper OOP design with interfaces in Python
 """
 
-from abc import ABC, abstractmethod
-from typing import Tuple, Dict, Optional
-import machine
-import time
+try:
+    from abc import ABC, abstractmethod
+except ImportError:
+    # Fallback for MicroPython without abc module
+    class ABC:
+        pass
+    
+    def abstractmethod(func):
+        return func
+
+try:
+    from typing import Tuple, Dict, Optional
+except ImportError:
+    # MicroPython doesn't have typing module
+    pass
 
 
 class ISensorCommunication(ABC):

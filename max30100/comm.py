@@ -3,7 +3,10 @@ import machine
 try:
     from . import sensor_interface as si
 except ImportError:
-    import sensor_interface as si
+    try:
+        import max30100.sensor_interface as si
+    except ImportError:
+        import sensor_interface as si
 
 class MAX30100Communication(si.ISensorCommunication):
     """I2C Communication implementation for MAX30100"""

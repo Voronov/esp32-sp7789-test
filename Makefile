@@ -19,11 +19,15 @@ help:
 	@echo "ESP32 ST7789 Project Makefile"
 	@echo ""
 	@echo "Usage:"
-	@echo "  make init          - Create virtual environment and install dependencies"
-	@echo "  make run_test      - Deploy and run the Test project"
-	@echo "  make run_clock     - Deploy and run the Clock project"
-	@echo "  make clean         - Remove virtual environment and temporary files"
-	@echo "  make reset_port    - Clear the saved port to select a new one"
+	@echo "  make init             - Create virtual environment and install dependencies"
+	@echo "  make run_test         - Deploy and run the Test project"
+	@echo "  make run_clock        - Deploy and run the Clock project"
+	@echo "  make run_sensor       - Deploy and run MAX30100 sensor"
+	@echo "  make run_hcsr04       - Deploy and run HC-SR04 with display"
+	@echo "  make run_hcsr04_simple- Deploy and run HC-SR04 console only"
+	@echo "  make run_mpu6050      - Deploy and run MPU6050 sensor"
+	@echo "  make clean            - Remove virtual environment and temporary files"
+	@echo "  make reset_port       - Clear the saved port to select a new one"
 	@echo ""
 
 # Initialize Environment
@@ -100,6 +104,9 @@ run_sensor: check_port
 	@echo "Deploying MAX30100 Sensor Project to $$(cat $(PORT_FILE))..."
 	@# Create max30100 directory on device
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :max30100 || true
+	@# Copy Driver and Font to root
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp driver/st7789.py :st7789.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp clock/vga2_bold_16x32.py :vga2_bold_16x32.py
 	@# Copy Sensor Files
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/sensor_interface.py :max30100/sensor_interface.py
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp max30100/constants.py :max30100/constants.py
@@ -111,6 +118,52 @@ run_sensor: check_port
 	@# Run the sensor script
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run max30100/example.py
 
+# Run HC-SR04 Distance Sensor with Display
+.PHONY: run_hcsr04
+run_hcsr04: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying HC-SR04 Project to $$(cat $(PORT_FILE))..."
+	@# Create hcsr04 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :hcsr04 || true
+	@# Copy Driver and Font to root
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp driver/st7789.py :st7789.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp clock/vga2_bold_16x32.py :vga2_bold_16x32.py
+	@# Copy HC-SR04 Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/driver.py :hcsr04/driver.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/__init__.py :hcsr04/__init__.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/example.py :hcsr04/example.py
+	@echo "Files copied. Running HC-SR04 demo with display..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run hcsr04/example.py
+
+# Run HC-SR04 Simple Console Example
+.PHONY: run_hcsr04_simple
+run_hcsr04_simple: check_port
+	@echo "---------------------------------------------------"
+	@echo "Running HC-SR04 Simple Console Example on $$(cat $(PORT_FILE))..."
+	@# Create hcsr04 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :hcsr04 || true
+	@# Copy HC-SR04 Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/driver.py :hcsr04/driver.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/__init__.py :hcsr04/__init__.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp hcsr04/example_simple.py :hcsr04/example_simple.py
+	@echo "Files copied. Running HC-SR04 simple demo..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run hcsr04/example_simple.py
+
+# Run MPU6050 Accelerometer/Gyroscope Sensor
+.PHONY: run_mpu6050
+run_mpu6050: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying MPU6050 Project to $$(cat $(PORT_FILE))..."
+	@# Create mpu6050 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :mpu6050 || true
+	@# Copy MPU6050 Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/example.py :mpu6050/example.py
+	@echo "Files copied. Running MPU6050 demo..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run mpu6050/example.py
+
 # Generic Run Target (Interactive)
 .PHONY: run
 run: check_port
@@ -119,7 +172,10 @@ run: check_port
 	@echo "2) Clock (clock_ui.py)"
 	@echo "3) Simple SPI (simple_spi.py)"
 	@echo "4) MAX30100 Sensor (example.py)"
-	@read -p "Enter choice [1/2/3/4]: " choice; \
+	@echo "5) HC-SR04 Distance Sensor (with display)"
+	@echo "6) HC-SR04 Simple (console only)"
+	@echo "7) MPU6050 Accelerometer/Gyroscope"
+	@read -p "Enter choice [1-7]: " choice; \
 	if [ "$$choice" = "1" ]; then \
 		$(MAKE) run_test; \
 	elif [ "$$choice" = "2" ]; then \
@@ -128,6 +184,12 @@ run: check_port
 		$(MAKE) run_simple; \
 	elif [ "$$choice" = "4" ]; then \
 		$(MAKE) run_sensor; \
+	elif [ "$$choice" = "5" ]; then \
+		$(MAKE) run_hcsr04; \
+	elif [ "$$choice" = "6" ]; then \
+		$(MAKE) run_hcsr04_simple; \
+	elif [ "$$choice" = "7" ]; then \
+		$(MAKE) run_mpu6050; \
 	else \
 		echo "Invalid choice."; \
 	fi

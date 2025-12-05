@@ -1,5 +1,8 @@
 import machine
-import driver.st7789 as st7789
+try:
+    import st7789
+except ImportError:
+    import driver.st7789 as st7789
 import time
 
 # 1. Define the pins (MATCHING YOUR WORKING ARDUINO SETUP)

@@ -1,13 +1,23 @@
 """MAX30100 Sensor Device Driver"""
 import time
-from typing import Tuple, Dict, Optional
+
+# Handle typing imports for MicroPython compatibility
+try:
+    from typing import Tuple, Dict, Optional
+except ImportError:
+    # MicroPython doesn't have typing module
+    pass
 
 try:
     from . import sensor_interface as si
     from .constants import MAX30100Config
 except ImportError:
-    import sensor_interface as si
-    from constants import MAX30100Config
+    try:
+        import max30100.sensor_interface as si
+        from max30100.constants import MAX30100Config
+    except ImportError:
+        import sensor_interface as si
+        from constants import MAX30100Config
 
 class MAX30100(si.ISensorInitializable, si.ISensorData, si.ISensorStatus, si.IHealthSensor):
     """
