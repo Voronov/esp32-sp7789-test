@@ -18,10 +18,19 @@ This project provides a MicroPython driver for ST7789-based displays and include
 │   ├── example.py         # Example with ST7789 display
 │   ├── example_simple.py  # Simple console example
 │   └── README.md          # HC-SR04 documentation
+├── mpu6050/
+│   ├── driver.py          # MPU6050 Driver (Bridge Pattern)
+│   ├── example_menu.py    # Interactive menu example
+│   ├── example_display.py # ST7789 display example
+│   ├── i2c_scanner.py     # I2C diagnostic tool
+│   ├── example.py         # Legacy example
+│   └── README.md          # MPU6050 documentation
 ├── test/
-│   └── sp7789_test.py     # Simple hardware test script
+│   ├── sp7789_test.py     # Simple hardware test script
+│   └── hello_world.py     # Basic firmware verification
 ├── tools/
-│   ├── flash_firmware.py  # Script to download and flash MicroPython
+│   ├── flash_esp32.py     # Script to flash MicroPython firmware
+│   ├── flash_firmware.py  # Legacy flash script
 │   └── select_port.py     # Script to identify ESP32 serial port
 └── Makefile               # Build and run automation
 ```
@@ -32,6 +41,7 @@ This project provides a MicroPython driver for ST7789-based displays and include
 - **ST7789 Display Module** (Demo configured for 240x240 resolution)
 - **MAX30100 Pulse Oximeter Sensor** (I2C)
 - **HC-SR04 Ultrasonic Distance Sensor** (GPIO)
+- **MPU6050 Accelerometer/Gyroscope** (I2C)
 
 ## Wiring Configuration
 
@@ -66,6 +76,16 @@ The default pin configuration in the scripts is as follows:
 | **ECHO**   | GPIO 14   | Echo (configurable, use voltage divider for 5V) |
 | **GND**    | GND       | Ground |
 
+### MPU6050 Wiring
+
+| Sensor Pin | ESP32 Pin | Notes |
+|------------|-----------|-------|
+| **VCC**    | 3.3V      | Power |
+| **SCL**    | GPIO 17   | I2C Clock |
+| **SDA**    | GPIO 18   | I2C Data |
+| **GND**    | GND       | Ground |
+| **AD0**    | GND/3.3V  | Address select (GND=0x68, 3.3V=0x69) |
+
 > **Note:** If your display module requires a Chip Select (CS) pin, update the pin definition in the code (currently set to `None`).
 > 
 > **HC-SR04 Warning:** The ECHO pin outputs 5V. Use a voltage divider (1kΩ + 2kΩ) to protect ESP32 GPIO pins. See `hcsr04/README.md` for details.
@@ -83,7 +103,7 @@ make init
 ### 2. Flash MicroPython Firmware (Optional)
 If your ESP32 needs a fresh MicroPython installation:
 ```bash
-make flash
+make flash_esp32
 ```
 *   Downloads the latest **ESP32_GENERIC** firmware.
 *   Asks for confirmation before erasing and flashing.
@@ -125,14 +145,30 @@ make run_sensor
 **Run HC-SR04 Distance Sensor:**
 ```bash
 # Simple console example
-mpremote run hcsr04/example_simple.py
+make run_hcsr04_simple
 
 # With ST7789 display
-mpremote run hcsr04/example.py
+make run_hcsr04
 ```
 *   Reads distance from HC-SR04 ultrasonic sensor.
 *   Displays measurements in cm, mm, and inches.
 *   See `hcsr04/README.md` for detailed documentation.
+
+**Run MPU6050 Accelerometer/Gyroscope:**
+```bash
+# Interactive menu interface
+make run_mpu6050_menu
+
+# Continuous ST7789 display
+make run_mpu6050_display
+
+# Scan I2C bus for diagnostics
+make scan_i2c
+```
+*   Reads acceleration (g), gyroscope (°/s), and temperature (°C).
+*   Menu interface with wake/sleep cycles.
+*   Real-time display with color-coded sections.
+*   See `mpu6050/README.md` for detailed documentation.
 
 **Interactive Menu:**
 ```bash
@@ -224,3 +260,52 @@ if sensor.is_object_detected(threshold_cm=30):
 ```
 
 **Important:** HC-SR04 ECHO pin outputs 5V. Use a voltage divider to protect ESP32 GPIO pins. See `hcsr04/README.md` for complete wiring diagrams and safety information.
+
+## MPU6050 Details (`mpu6050/driver.py`)
+
+The MPU6050 driver uses the **Bridge Pattern** to separate device communication from data processing:
+
+**Device Layer (`MPU6050Device`):**
+- Low-level I2C communication
+- Register access and power management
+- Connection verification with diagnostics
+- Error handling (strict/non-strict modes)
+
+**Sensor Layer (`MPU6050Sensor`):**
+- Temperature conversion (°C)
+- Acceleration conversion (g)
+- Gyroscope conversion (°/s)
+- Data aggregation
+
+**Key Features:**
+- **Range**: ±2g (accel), ±250°/s (gyro), -40°C to +85°C
+- **Error Handling**: Graceful degradation with diagnostics
+- **Power Management**: Wake/sleep cycle support
+- **I2C Scanner**: Built-in diagnostic tool
+
+To use it in your own code:
+```python
+from mpu6050.driver import MPU6050Device, MPU6050Sensor
+from machine import I2C, Pin
+
+i2c = I2C(0, scl=Pin(17), sda=Pin(18), freq=400000)
+device = MPU6050Device(i2c, strict=False)  # Non-strict mode
+
+if device.connected:
+    sensor = MPU6050Sensor(device)
+    sensor.activate()
+    
+    data = sensor.get_all_data()
+    print(f"Temp: {data['temperature']}°C")
+    print(f"Accel: {data['acceleration']}")
+    print(f"Gyro: {data['gyroscope']}")
+    
+    sensor.deactivate()
+```
+
+**Troubleshooting:**
+If the sensor is not detected, run the I2C scanner:
+```bash
+make scan_i2c
+```
+This will show all connected I2C devices and help diagnose connection issues.
