@@ -20,12 +20,17 @@ help:
 	@echo ""
 	@echo "Usage:"
 	@echo "  make init             - Create virtual environment and install dependencies"
+	@echo "  make flash_esp32      - Erase and flash ESP32 with MicroPython firmware"
+	@echo "  make hello            - Run simple hello world test (verify firmware)"
 	@echo "  make run_test         - Deploy and run the Test project"
 	@echo "  make run_clock        - Deploy and run the Clock project"
 	@echo "  make run_sensor       - Deploy and run MAX30100 sensor"
 	@echo "  make run_hcsr04       - Deploy and run HC-SR04 with display"
 	@echo "  make run_hcsr04_simple- Deploy and run HC-SR04 console only"
-	@echo "  make run_mpu6050      - Deploy and run MPU6050 sensor"
+	@echo "  make run_mpu6050      - Deploy and run MPU6050 sensor (legacy)"
+	@echo "  make run_mpu6050_menu - Deploy and run MPU6050 with menu interface"
+	@echo "  make run_mpu6050_display - Deploy and run MPU6050 with ST7789 display"
+	@echo "  make scan_i2c         - Scan I2C bus for connected devices"
 	@echo "  make clean            - Remove virtual environment and temporary files"
 	@echo "  make reset_port       - Clear the saved port to select a new one"
 	@echo ""
@@ -53,10 +58,23 @@ reset_port:
 	rm -f $(PORT_FILE)
 	@echo "Port selection reset."
 
-# Flash Firmware
+# Flash ESP32 with MicroPython Firmware
+.PHONY: flash_esp32
+flash_esp32: check_port
+	$(VENV_PYTHON) tools/flash_esp32.py
+
+# Flash Firmware (legacy)
 .PHONY: flash
 flash: check_port
 	$(VENV_PYTHON) tools/flash_firmware.py
+
+# Run Hello World Test
+.PHONY: hello
+hello: check_port
+	@echo "---------------------------------------------------"
+	@echo "Running Hello World Test on $$(cat $(PORT_FILE))..."
+	@echo "---------------------------------------------------"
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run test/hello_world.py
 
 # Run Test Project
 .PHONY: run_test
@@ -151,7 +169,7 @@ run_hcsr04_simple: check_port
 	@# Run the script
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run hcsr04/example_simple.py
 
-# Run MPU6050 Accelerometer/Gyroscope Sensor
+# Run MPU6050 Accelerometer/Gyroscope Sensor (Legacy)
 .PHONY: run_mpu6050
 run_mpu6050: check_port
 	@echo "---------------------------------------------------"
@@ -163,6 +181,49 @@ run_mpu6050: check_port
 	@echo "Files copied. Running MPU6050 demo..."
 	@# Run the script
 	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run mpu6050/example.py
+
+# Run MPU6050 with Menu Interface
+.PHONY: run_mpu6050_menu
+run_mpu6050_menu: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying MPU6050 Menu Project to $$(cat $(PORT_FILE))..."
+	@# Create mpu6050 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :mpu6050 || true
+	@# Copy MPU6050 Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/driver.py :mpu6050/driver.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/example_menu.py :mpu6050/example_menu.py
+	@echo "Files copied. Running MPU6050 menu demo..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run mpu6050/example_menu.py
+
+# Run MPU6050 with ST7789 Display
+.PHONY: run_mpu6050_display
+run_mpu6050_display: check_port
+	@echo "---------------------------------------------------"
+	@echo "Deploying MPU6050 Display Project to $$(cat $(PORT_FILE))..."
+	@# Create mpu6050 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :mpu6050 || true
+	@# Copy Driver to root
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp driver/st7789.py :st7789.py
+	@# Copy MPU6050 Files
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/driver.py :mpu6050/driver.py
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/example_display.py :mpu6050/example_display.py
+	@echo "Files copied. Running MPU6050 display demo..."
+	@# Run the script
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run mpu6050/example_display.py
+
+# Scan I2C Bus
+.PHONY: scan_i2c
+scan_i2c: check_port
+	@echo "---------------------------------------------------"
+	@echo "Scanning I2C Bus on $$(cat $(PORT_FILE))..."
+	@# Create mpu6050 directory on device
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs mkdir :mpu6050 || true
+	@# Copy I2C scanner
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) fs cp mpu6050/i2c_scanner.py :mpu6050/i2c_scanner.py
+	@echo "Running I2C scanner..."
+	@# Run the scanner
+	$(MPREMOTE) connect $$(cat $(PORT_FILE)) run mpu6050/i2c_scanner.py
 
 # Generic Run Target (Interactive)
 .PHONY: run
