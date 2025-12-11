@@ -53,6 +53,9 @@ pip-wheel-metadata/
 .env
 .env.local
 
+# Local port configuration
+.port
+
 # Logs
 *.log
 
